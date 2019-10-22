@@ -13,7 +13,9 @@ import net.minecraft.network.play.client.C16PacketClientStatus;
 import net.minecraft.stats.StatBase;
 import net.minecraft.stats.StatCrafting;
 import net.minecraft.stats.StatFileWriter;
-import net.minecraft.util.*;
+import net.minecraft.util.BlockPos;
+import net.minecraft.util.EnumChatFormatting;
+import net.minecraft.util.ResourceLocation;
 import net.minecraft.world.WorldServer;
 import net.minecraftforge.client.ClientCommandHandler;
 import net.minecraftforge.common.MinecraftForge;
@@ -24,7 +26,7 @@ import net.minecraftforge.fml.common.event.FMLPostInitializationEvent;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 import net.minecraftforge.fml.common.gameevent.TickEvent;
 
-import java.awt.*;
+import java.awt.Color;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -58,7 +60,7 @@ public class TechnoSaplingCounter {
     public static boolean running = false;
     public static byte index = 0;
     public static int currentTree = 0;
-    public int currentTick = 0;
+    public static int currentTick = 0;
     public int ticksPerAction = 1;
     private short tick = 0;
     private List<StatBase> saplings = new ArrayList<>();
@@ -142,27 +144,34 @@ public class TechnoSaplingCounter {
         }
 
 
-        BlockPos posForCurrentTree = getPosForCurrentTree(4);
-        switch (index) {
-            case 1: {
-                double offset = 4;
-                BlockPos playerPos = posForCurrentTree.south((int) offset);
-                float atan = (float) Math.atan(1D / offset);
-                for (WorldServer worldServer : Minecraft.getMinecraft().getIntegratedServer().worldServers) {
-                    for (EntityPlayer playerEntity : worldServer.playerEntities) {
-                        if (playerEntity.getUniqueID() == Minecraft.getMinecraft().thePlayer.getUniqueID()) {
-                            ((EntityPlayerMP) playerEntity).playerNetServerHandler.setPlayerLocation(playerPos.getX(), playerPos.getY(), playerPos.getZ(), 180, (float) (Math.toDegrees(atan))); //Tan -1 .5
-                        }
-                    }
+        Pos playerPos = getPos(currentTick);
+//        switch (index) {
+//            case 1: {
+//                double offset = 4;
+//                BlockPos playerPos = posForCurrentTree.south((int) offset);
+        float atan = (float) Math.atan(1D / offset);
+        for (WorldServer worldServer : Minecraft.getMinecraft().getIntegratedServer().worldServers) {
+            for (EntityPlayer playerEntity : worldServer.playerEntities) {
+                if (playerEntity.getUniqueID() == Minecraft.getMinecraft().thePlayer.getUniqueID()) {
+                    ((EntityPlayerMP) playerEntity).playerNetServerHandler.setPlayerLocation(playerPos.x, 4, playerPos.z, 180, 0); //Tan -1 .5
                 }
-                break;
             }
-            case 2: {
-                Minecraft.getMinecraft().playerController.onPlayerRightClick(thePlayer, Minecraft.getMinecraft().theWorld, thePlayer.getHeldItem(), posForCurrentTree, EnumFacing.UP, new Vec3(0, 0, 0));
-                break;
-            }
+//                }
+//                break;
+//            }
+//            case 2: {
+//                Minecraft.getMinecraft().playerController.onPlayerRightClick(thePlayer, Minecraft.getMinecraft().theWorld, thePlayer.getHeldItem(), posForCurrentTree, EnumFacing.UP, new Vec3(0, 0, 0));
+//                break;
+//            }
         }
 
+    }
+    private double relT = 0;
+    private Pos getPos(int tick) {
+        relT += 30D / (Math.PI * 2 * ((double) tick));
+        double x = relT * Math.cos(relT) / Math.PI;
+        double z = relT * Math.sin(relT) / Math.PI;
+        return new Pos(x, z);
     }
 
     private BlockPos getPosForCurrentTree(int y) {
@@ -172,7 +181,6 @@ public class TechnoSaplingCounter {
             row = 1000 - row;
         return new BlockPos(row, y, column);
     }
-
 
     @SubscribeEvent
     public void onRender(TickEvent.RenderTickEvent event) {
@@ -222,5 +230,14 @@ public class TechnoSaplingCounter {
     private void render(String text, int y, int xTail, int padding, FontRenderer fontRendererObj, int stringWidth, ScaledResolution scaledResolution) {
         Gui.drawRect(scaledResolution.getScaledWidth() - stringWidth - xTail - padding, y, scaledResolution.getScaledWidth() + stringWidth - xTail, y + 10, new Color(0, 0, 0, 100).getRGB());
         fontRendererObj.drawStringWithShadow(text, scaledResolution.getScaledWidth() - stringWidth - xTail, y + 1, Color.WHITE.getRGB());
+    }
+
+    class Pos {
+        double x, z;
+
+        public Pos(double x, double z) {
+            this.x = x;
+            this.z = z;
+        }
     }
 }

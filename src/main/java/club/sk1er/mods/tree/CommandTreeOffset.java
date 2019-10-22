@@ -27,8 +27,8 @@ public class CommandTreeOffset extends CommandBase {
         if(args.length != 1 || !NumberUtils.isNumber(args[0].replaceFirst("-",""))) {
             sender.addChatMessage(new ChatComponentText("/countoffset <number>"));
         } else {
-            TechnoSaplingCounter.offset = Integer.parseInt(args[0]);
-            sender.addChatMessage(new ChatComponentText("Set offset to " + TechnoSaplingCounter.offset));
+            TechnoSaplingCounter.currentTick = Integer.parseInt(args[0]);
+            sender.addChatMessage(new ChatComponentText("Set offset to " + TechnoSaplingCounter.currentTick));
         }
     }
 }
