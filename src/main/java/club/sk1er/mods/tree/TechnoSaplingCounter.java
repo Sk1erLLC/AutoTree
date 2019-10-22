@@ -61,6 +61,7 @@ public class TechnoSaplingCounter {
     public static byte index = 0;
     public static int currentTree = 0;
     public static int currentTick = 0;
+    public static double relT = 0;
     public int ticksPerAction = 1;
     private short tick = 0;
     private List<StatBase> saplings = new ArrayList<>();
@@ -149,6 +150,8 @@ public class TechnoSaplingCounter {
 //            case 1: {
 //                double offset = 4;
 //                BlockPos playerPos = posForCurrentTree.south((int) offset);
+
+        System.out.println(Math.pow(thePlayer.posX - thePlayer.lastTickPosX, 2) + Math.pow(thePlayer.posZ - thePlayer.lastTickPosZ, 2));
         float atan = (float) Math.atan(1D / offset);
         for (WorldServer worldServer : Minecraft.getMinecraft().getIntegratedServer().worldServers) {
             for (EntityPlayer playerEntity : worldServer.playerEntities) {
@@ -166,11 +169,13 @@ public class TechnoSaplingCounter {
         }
 
     }
-    private double relT = 0;
+
     private Pos getPos(int tick) {
-        relT += 30D / (Math.PI * 2 * ((double) tick));
-        double x = relT * Math.cos(relT) / Math.PI;
-        double z = relT * Math.sin(relT) / Math.PI;
+
+        double v = 3D / 2D * Math.PI;
+        relT += .1D / (Math.PI * 2 * Math.toRadians(tick / v));
+        double x = relT * Math.cos(relT) / v;
+        double z = relT * Math.sin(relT) / v;
         return new Pos(x, z);
     }
 
