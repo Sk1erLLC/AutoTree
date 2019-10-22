@@ -6,13 +6,15 @@ import net.minecraft.client.gui.FontRenderer;
 import net.minecraft.client.gui.Gui;
 import net.minecraft.client.gui.ScaledResolution;
 import net.minecraft.client.network.NetHandlerPlayClient;
+import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.item.Item;
 import net.minecraft.network.play.client.C16PacketClientStatus;
 import net.minecraft.stats.StatBase;
 import net.minecraft.stats.StatCrafting;
 import net.minecraft.stats.StatFileWriter;
-import net.minecraft.util.EnumChatFormatting;
-import net.minecraft.util.ResourceLocation;
+import net.minecraft.util.*;
+import net.minecraft.world.WorldServer;
 import net.minecraftforge.client.ClientCommandHandler;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.fml.common.Mod;
@@ -23,15 +25,42 @@ import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 import net.minecraftforge.fml.common.gameevent.TickEvent;
 
 import java.awt.*;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
+import java.util.TimeZone;
+import java.util.concurrent.TimeUnit;
 
 @Mod(modid = TechnoSaplingCounter.MODID, version = TechnoSaplingCounter.VERSION)
 public class TechnoSaplingCounter {
+
+    public static final boolean ENABLE_DANGEROUS_STUFF = true;
+
+
     public static final String MODID = "techno-sapling-counter";
     public static final String VERSION = "1.0";
+    /*
+    #Index
+    0 -> idle
+    1 -> move to loc & look at loc
+
+//    2 -> place tree
+    #not used yet
+//    3 -> bone meal 1
+//    4 -> bone meal 2
+//    5 -> bone meal 3
+
+     */
+    public static final int TREE_GOAL = 1_000_000;
+
     public static int offset = 0;
-    short tick = 0;
+    public static boolean running = false;
+    public static byte index = 0;
+    public static int currentTree = 0;
+    public int currentTick = 0;
+    public int ticksPerAction = 1;
+    private short tick = 0;
     private List<StatBase> saplings = new ArrayList<>();
 
     private static String func_180204_a(Item p_180204_0_) {
@@ -43,6 +72,10 @@ public class TechnoSaplingCounter {
     public void init(FMLInitializationEvent event) {
         MinecraftForge.EVENT_BUS.register(this);
         ClientCommandHandler.instance.registerCommand(new CommandTreeOffset());
+        if (ENABLE_DANGEROUS_STUFF) {
+            ClientCommandHandler.instance.registerCommand(new CommandLetsPlantTheseTrees());
+            ClientCommandHandler.instance.registerCommand(new CommandTreePlantOffset());
+        }
     }
 
     @EventHandler
@@ -58,17 +91,29 @@ public class TechnoSaplingCounter {
 
     @SubscribeEvent
     public void tickEvent(TickEvent.ClientTickEvent event) {
+
         if (event.phase == TickEvent.Phase.START) {
-            NetHandlerPlayClient netHandler = Minecraft.getMinecraft().getNetHandler();
-            if (netHandler != null) {
-                tick++;
-                if (tick >= 20 * 15 + 2) //15.1 seconds
-                    netHandler.addToSendQueue(new C16PacketClientStatus(C16PacketClientStatus.EnumState.REQUEST_STATS));
+            if (running) {
+                currentTick++;
+                if (currentTick % ticksPerAction == 0) {
+                    tickAI();
+                }
+            } else {
+                NetHandlerPlayClient netHandler = Minecraft.getMinecraft().getNetHandler();
+                if (netHandler != null) {
+                    tick++;
+                    if (tick >= 20 * 15 + 2) {
+                        netHandler.addToSendQueue(new C16PacketClientStatus(C16PacketClientStatus.EnumState.REQUEST_STATS));
+                        tick = 0;
+                    }
+                }
             }
         }
     }
 
     public int getSaplingCount() {
+        if (running || ENABLE_DANGEROUS_STUFF) return currentTree;
+
         EntityPlayerSP thePlayer = Minecraft.getMinecraft().thePlayer;
         if (thePlayer != null) {
             StatFileWriter statFileWriter = thePlayer.getStatFileWriter();
@@ -82,6 +127,52 @@ public class TechnoSaplingCounter {
         }
         return offset;
     }
+
+    private void tickAI() {
+        if (!ENABLE_DANGEROUS_STUFF) return;
+        if (!running) return;
+        if (currentTree == TREE_GOAL) return;
+        EntityPlayerSP thePlayer = Minecraft.getMinecraft().thePlayer;
+        if (thePlayer == null) return;
+
+        index++;
+        if (index == 3) {
+            index = 1;
+            currentTree++;
+        }
+
+
+        BlockPos posForCurrentTree = getPosForCurrentTree(4);
+        switch (index) {
+            case 1: {
+                double offset = 4;
+                BlockPos playerPos = posForCurrentTree.south((int) offset);
+                float atan = (float) Math.atan(1D / offset);
+                for (WorldServer worldServer : Minecraft.getMinecraft().getIntegratedServer().worldServers) {
+                    for (EntityPlayer playerEntity : worldServer.playerEntities) {
+                        if (playerEntity.getUniqueID() == Minecraft.getMinecraft().thePlayer.getUniqueID()) {
+                            ((EntityPlayerMP) playerEntity).playerNetServerHandler.setPlayerLocation(playerPos.getX(), playerPos.getY(), playerPos.getZ(), 180, (float) (Math.toDegrees(atan))); //Tan -1 .5
+                        }
+                    }
+                }
+                break;
+            }
+            case 2: {
+                Minecraft.getMinecraft().playerController.onPlayerRightClick(thePlayer, Minecraft.getMinecraft().theWorld, thePlayer.getHeldItem(), posForCurrentTree, EnumFacing.UP, new Vec3(0, 0, 0));
+                break;
+            }
+        }
+
+    }
+
+    private BlockPos getPosForCurrentTree(int y) {
+        int column = currentTree / 1000;
+        int row = currentTree % 1000;
+        if (column % 2 == 0)
+            row = 1000 - row;
+        return new BlockPos(row, y, column);
+    }
+
 
     @SubscribeEvent
     public void onRender(TickEvent.RenderTickEvent event) {
@@ -97,9 +188,39 @@ public class TechnoSaplingCounter {
         FontRenderer fontRendererObj = Minecraft.getMinecraft().fontRendererObj;
         int stringWidth = fontRendererObj.getStringWidth(text);
         ScaledResolution scaledResolution = new ScaledResolution(Minecraft.getMinecraft());
+        render(text, y, xTail, padding, fontRendererObj, stringWidth, scaledResolution);
+        if (ENABLE_DANGEROUS_STUFF) {
+            y += 10;
+            text = "Progress: " + (currentTree) + "/" + TREE_GOAL;
+            stringWidth = fontRendererObj.getStringWidth(text);
+            render(text, y, xTail, padding, fontRendererObj, stringWidth, scaledResolution);
 
+            y += 10;
+            text = Math.round(currentTree * 100000D / ((double) TREE_GOAL)) / 1000D + "%";
+            render(text, y, xTail, padding, fontRendererObj, fontRendererObj.getStringWidth(text), scaledResolution);
+
+
+            y += 10;
+            long ms = currentTree * 100;
+            SimpleDateFormat simpleDateFormat = new SimpleDateFormat("'Hours:' H 'Minutes:' m 'Seconds:' s");
+            boolean flag = ms > TimeUnit.DAYS.toMillis(1);
+            if (flag) {
+                ms -= TimeUnit.DAYS.toMillis(1);
+                simpleDateFormat = new SimpleDateFormat("'Day:' d 'Hours:' H 'Minutes:' m 'Seconds:' s");
+            }
+
+            simpleDateFormat.setTimeZone(TimeZone.getTimeZone("GMT"));
+
+            text = (flag ? "Day: 0 " : "") + simpleDateFormat.format(new Date(ms));
+
+            render(text, y, xTail, padding, fontRendererObj, fontRendererObj.getStringWidth(text), scaledResolution);
+
+
+        }
+    }
+
+    private void render(String text, int y, int xTail, int padding, FontRenderer fontRendererObj, int stringWidth, ScaledResolution scaledResolution) {
         Gui.drawRect(scaledResolution.getScaledWidth() - stringWidth - xTail - padding, y, scaledResolution.getScaledWidth() + stringWidth - xTail, y + 10, new Color(0, 0, 0, 100).getRGB());
-
         fontRendererObj.drawStringWithShadow(text, scaledResolution.getScaledWidth() - stringWidth - xTail, y + 1, Color.WHITE.getRGB());
     }
 }
