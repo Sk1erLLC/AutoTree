@@ -6,7 +6,7 @@ import net.minecraft.command.ICommandSender;
 import net.minecraft.util.ChatComponentText;
 import org.apache.commons.lang3.math.NumberUtils;
 
-public class CommandTreeOffset extends CommandBase {
+public class CommandSetCurrentTick extends CommandBase {
     @Override
     public boolean canCommandSenderUseCommand(ICommandSender sender) {
         return true;
@@ -14,21 +14,23 @@ public class CommandTreeOffset extends CommandBase {
 
     @Override
     public String getCommandName() {
-        return "countoffset";
+        return "setcurrenttick";
     }
 
     @Override
     public String getCommandUsage(ICommandSender sender) {
-        return "/countoffset <num>";
+        return "/setcurrenttick <num>";
     }
 
     @Override
     public void processCommand(ICommandSender sender, String[] args) throws CommandException {
         if(args.length != 1 || !NumberUtils.isNumber(args[0].replaceFirst("-",""))) {
-            sender.addChatMessage(new ChatComponentText("/countoffset <number>"));
+            sender.addChatMessage(new ChatComponentText("/setcurrenttick <number>"));
+            sender.addChatMessage(new ChatComponentText("current tick is " +  TechnoSaplingCounter.currentTick));
+
         } else {
             TechnoSaplingCounter.currentTick = Integer.parseInt(args[0]);
-            sender.addChatMessage(new ChatComponentText("Set offset to " + TechnoSaplingCounter.currentTick));
+            sender.addChatMessage(new ChatComponentText("Set setcurrenttick to " + TechnoSaplingCounter.currentTick));
         }
     }
 }

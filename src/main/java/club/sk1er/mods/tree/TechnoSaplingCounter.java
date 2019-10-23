@@ -1,5 +1,6 @@
 package club.sk1er.mods.tree;
 
+import javafx.geometry.Pos;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.entity.EntityPlayerSP;
 import net.minecraft.client.gui.FontRenderer;
@@ -14,11 +15,7 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.stats.StatBase;
 import net.minecraft.stats.StatCrafting;
 import net.minecraft.stats.StatFileWriter;
-import net.minecraft.util.BlockPos;
-import net.minecraft.util.EnumChatFormatting;
-import net.minecraft.util.EnumFacing;
-import net.minecraft.util.ResourceLocation;
-import net.minecraft.util.Vec3;
+import net.minecraft.util.*;
 import net.minecraft.world.WorldServer;
 import net.minecraftforge.client.ClientCommandHandler;
 import net.minecraftforge.common.MinecraftForge;
@@ -29,14 +26,11 @@ import net.minecraftforge.fml.common.event.FMLPostInitializationEvent;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 import net.minecraftforge.fml.common.gameevent.TickEvent;
 
-import java.awt.Color;
+import java.awt.*;
 import java.text.NumberFormat;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
-import java.util.Objects;
-import java.util.TimeZone;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 
 @Mod(modid = TechnoSaplingCounter.MODID, version = TechnoSaplingCounter.VERSION)
@@ -59,14 +53,13 @@ public class TechnoSaplingCounter {
 //    5 -> bone meal 3
 
      */
-    public static final int TREE_GOAL = 1_000_000;
+    public static int TREE_GOAL = 1_000_000;
 
     public static int offset = 0;
     public static boolean running = false;
     public static byte index = 0;
     public static int currentTree = 0;
     public static int currentTick = 0;
-    public static double relT = 0;
     public int ticksPerAction = 1;
     private short tick = 0;
     private List<StatBase> saplings = new ArrayList<>();
@@ -92,11 +85,12 @@ public class TechnoSaplingCounter {
     @EventHandler
     public void init(FMLInitializationEvent event) {
         MinecraftForge.EVENT_BUS.register(this);
-        ClientCommandHandler.instance.registerCommand(new CommandTreeOffset());
+        ClientCommandHandler.instance.registerCommand(new CommandSetCurrentTick());
         if (ENABLE_DANGEROUS_STUFF) {
             ClientCommandHandler.instance.registerCommand(new CommandLetsPlantTheseTrees());
             ClientCommandHandler.instance.registerCommand(new CommandTreePlantOffset());
             ClientCommandHandler.instance.registerCommand(new CommandTps());
+            ClientCommandHandler.instance.registerCommand(new CommandSetTreeGoal());
         }
     }
 
@@ -189,6 +183,13 @@ public class TechnoSaplingCounter {
         updatePos(playerPos, horizOffset, playerHeight, treeLevel);
         if (currentTick % 3 == 0) return;
         index++;
+        if(currentTree % 10000 == 0) {
+            System.out.println("currentTree = " + currentTree);
+        }
+        if (currentTick % 10000 == 0) {
+            System.out.println("currentTick = " + currentTick);
+
+        }
         if (index == 3) {
             index = 1;
             currentTree++;
@@ -200,14 +201,6 @@ public class TechnoSaplingCounter {
             Minecraft.getMinecraft().thePlayer.swingItem();
         }
 
-    }
-
-    private BlockPos getPosForCurrentTree(int y) {
-        int column = currentTree / 1000;
-        int row = currentTree % 1000;
-        if (column % 2 == 0)
-            row = 1000 - row;
-        return new BlockPos(row, y, column);
     }
 
     @SubscribeEvent
