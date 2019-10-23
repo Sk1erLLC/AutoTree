@@ -53,7 +53,7 @@ public class TechnoSaplingCounter {
 //    5 -> bone meal 3
 
      */
-    public static int TREE_GOAL = 1_000_000;
+    public static int TREE_GOAL = 20_000_000;
 
     public static int offset = 0;
     public static boolean running = false;
