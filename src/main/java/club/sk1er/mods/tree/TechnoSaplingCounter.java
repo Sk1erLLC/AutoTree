@@ -30,6 +30,7 @@ import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 import net.minecraftforge.fml.common.gameevent.TickEvent;
 
 import java.awt.Color;
+import java.text.NumberFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -149,6 +150,29 @@ public class TechnoSaplingCounter {
         return offset;
     }
 
+    private void updatePos(Pos playerPos, double horizOffset, double playerHeight, double treeLevel) {
+        for (WorldServer worldServer : MinecraftServer.getServer().worldServers) {
+            for (EntityPlayer playerEntity : worldServer.playerEntities) {
+                if (playerEntity.getUniqueID() == Minecraft.getMinecraft().thePlayer.getUniqueID()) {
+                    double x = playerPos.x;
+                    double z = playerPos.z;
+                    double angle = Math.atan(z / x);
+                    x -= Math.cos(x > 0 ? angle + Math.PI : angle) * horizOffset;
+                    z -= Math.sin(x > 0 ? angle + Math.PI : angle) * horizOffset;
+                    angle = Math.toDegrees(angle);
+                    angle -= 90;
+                    if (x > 0) {
+                        angle += 180;
+                    }
+                    EntityPlayerMP playerEntity1 = (EntityPlayerMP) playerEntity;
+                    playerEntity1.theItemInWorldManager.setBlockReachDistance(1000000);
+                    playerEntity1.playerNetServerHandler.setPlayerLocation(x, playerHeight, z, (float) angle, (float) Math.toDegrees(Math.atan(((playerHeight - treeLevel) / horizOffset)))); //Tan -1 .5
+                    playerEntity1.playerNetServerHandler.hasMoved = true;
+                }
+            }
+        }
+    }
+
     private void tickAI() {
         if (!ENABLE_DANGEROUS_STUFF) return;
         if (!running) return;
@@ -156,48 +180,22 @@ public class TechnoSaplingCounter {
         EntityPlayerSP thePlayer = Minecraft.getMinecraft().thePlayer;
         if (thePlayer == null) return;
 
+        Pos playerPos = getPos(currentTick);
+        double playerHeight = 50;
+        double horizOffset = 50;
+        double treeLevel = 4;
+        updatePos(playerPos, horizOffset, playerHeight, treeLevel);
         index++;
+        if(currentTick % 3 ==0) return;
         if (index == 3) {
             index = 1;
             currentTree++;
         }
 
-
-        Pos playerPos = getPos(currentTick);
-//        System.out.println(Math.pow(thePlayer.posX - thePlayer.lastTickPosX, 2) + Math.pow(thePlayer.posZ - thePlayer.lastTickPosZ, 2));
-        double playerHeight = 50;
-        double horizOffset = 50;
-        double treeLevel = 4;
-        switch (index) {
-            case 2: {
-                BlockPos hitPos = new BlockPos(playerPos.x, treeLevel, playerPos.z);
-                Minecraft.getMinecraft().playerController.onPlayerRightClick(thePlayer, Minecraft.getMinecraft().theWorld, thePlayer.getHeldItem(), hitPos, EnumFacing.UP, new Vec3(0, 0, 0));
-                Minecraft.getMinecraft().thePlayer.swingItem();
-            }
-            case 1: {
-
-                for (WorldServer worldServer : MinecraftServer.getServer().worldServers) {
-                    for (EntityPlayer playerEntity : worldServer.playerEntities) {
-                        if (playerEntity.getUniqueID() == Minecraft.getMinecraft().thePlayer.getUniqueID()) {
-                            double x = playerPos.x;
-                            double z = playerPos.z;
-                            double angle = Math.atan(z / x);
-                            x -= Math.cos(x > 0 ? angle + Math.PI : angle) * horizOffset;
-                            z -= Math.sin(x > 0 ? angle + Math.PI : angle) * horizOffset;
-                            angle = Math.toDegrees(angle);
-                            angle -= 90;
-                            if (x > 0) {
-                                angle += 180;
-                            }
-                            EntityPlayerMP playerEntity1 = (EntityPlayerMP) playerEntity;
-                            playerEntity1.theItemInWorldManager.setBlockReachDistance(1000000);
-                            playerEntity1.playerNetServerHandler.setPlayerLocation(x, playerHeight, z, (float) angle, (float) Math.toDegrees(Math.atan(((playerHeight - treeLevel) / horizOffset)))); //Tan -1 .5
-                            playerEntity1.playerNetServerHandler.hasMoved = true;
-                        }
-                    }
-                }
-            }
-
+        if (index == 2) {
+            BlockPos hitPos = new BlockPos(playerPos.x, treeLevel, playerPos.z);
+            Minecraft.getMinecraft().playerController.onPlayerRightClick(thePlayer, Minecraft.getMinecraft().theWorld, thePlayer.getHeldItem(), hitPos, EnumFacing.UP, new Vec3(0, 0, 0));
+            Minecraft.getMinecraft().thePlayer.swingItem();
         }
 
     }
@@ -212,7 +210,10 @@ public class TechnoSaplingCounter {
 
     @SubscribeEvent
     public void onRender(TickEvent.RenderTickEvent event) {
-        String text = EnumChatFormatting.AQUA + "Trees Planted: " + getSaplingCount();
+        NumberFormat myFormat = NumberFormat.getInstance();
+        myFormat.setGroupingUsed(true); // this will also round numbers, 3
+
+        String text = EnumChatFormatting.AQUA + "Trees Planted: " + myFormat.format(getSaplingCount());
 
         int y = 3;
         int xTail = 3;
@@ -227,12 +228,12 @@ public class TechnoSaplingCounter {
         render(text, y, xTail, padding, fontRendererObj, stringWidth, scaledResolution);
         if (ENABLE_DANGEROUS_STUFF) {
             y += 10;
-            text = "Progress: " + (currentTree) + "/" + TREE_GOAL;
+            text = EnumChatFormatting.AQUA + "Progress: " + (myFormat.format(currentTree)) + "/" + myFormat.format(TREE_GOAL);
             stringWidth = fontRendererObj.getStringWidth(text);
             render(text, y, xTail, padding, fontRendererObj, stringWidth, scaledResolution);
 
             y += 10;
-            text = Math.round(currentTree * 100000D / ((double) TREE_GOAL)) / 1000D + "%";
+            text = EnumChatFormatting.AQUA.toString() + Math.round(currentTree * 100000D / ((double) TREE_GOAL)) / 1000D + "%";
             render(text, y, xTail, padding, fontRendererObj, fontRendererObj.getStringWidth(text), scaledResolution);
 
 
@@ -242,12 +243,12 @@ public class TechnoSaplingCounter {
             boolean flag = ms > TimeUnit.DAYS.toMillis(1);
             if (flag) {
                 ms -= TimeUnit.DAYS.toMillis(1);
-                simpleDateFormat = new SimpleDateFormat("'Day:' d 'Hours:' H 'Minutes:' m 'Seconds:' s");
+                simpleDateFormat = new SimpleDateFormat("'Days:' d 'Hours:' H 'Minutes:' m 'Seconds:' s");
             }
 
             simpleDateFormat.setTimeZone(TimeZone.getTimeZone("GMT"));
 
-            text = (flag ? "Day: 0 " : "") + simpleDateFormat.format(new Date(ms));
+            text = EnumChatFormatting.AQUA + (!flag ? "Days: 0 " : "") + simpleDateFormat.format(new Date(ms));
 
             render(text, y, xTail, padding, fontRendererObj, fontRendererObj.getStringWidth(text), scaledResolution);
 
