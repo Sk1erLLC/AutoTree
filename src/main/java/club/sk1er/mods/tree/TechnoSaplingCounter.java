@@ -176,7 +176,9 @@ public class TechnoSaplingCounter {
     private void tickAI() {
         if (!ENABLE_DANGEROUS_STUFF) return;
         if (!running) return;
-        if (currentTree == TREE_GOAL) return;
+        if (currentTree == TREE_GOAL) {
+            return;
+        }
         EntityPlayerSP thePlayer = Minecraft.getMinecraft().thePlayer;
         if (thePlayer == null) return;
 
@@ -185,8 +187,8 @@ public class TechnoSaplingCounter {
         double horizOffset = 50;
         double treeLevel = 4;
         updatePos(playerPos, horizOffset, playerHeight, treeLevel);
+        if (currentTick % 3 == 0) return;
         index++;
-        if(currentTick % 3 ==0) return;
         if (index == 3) {
             index = 1;
             currentTree++;
