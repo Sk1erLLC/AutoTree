@@ -10,12 +10,15 @@ import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.item.Item;
 import net.minecraft.network.play.client.C16PacketClientStatus;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.stats.StatBase;
 import net.minecraft.stats.StatCrafting;
 import net.minecraft.stats.StatFileWriter;
 import net.minecraft.util.BlockPos;
 import net.minecraft.util.EnumChatFormatting;
+import net.minecraft.util.EnumFacing;
 import net.minecraft.util.ResourceLocation;
+import net.minecraft.util.Vec3;
 import net.minecraft.world.WorldServer;
 import net.minecraftforge.client.ClientCommandHandler;
 import net.minecraftforge.common.MinecraftForge;
@@ -31,6 +34,7 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.Objects;
 import java.util.TimeZone;
 import java.util.concurrent.TimeUnit;
 
@@ -71,6 +75,19 @@ public class TechnoSaplingCounter {
         return resourcelocation != null ? resourcelocation.toString().replace(':', '.') : null;
     }
 
+
+    private Pos getPos(int tick) {
+
+        //new goal, take tick and find point tick * 3 units out on our r = theta spiral
+
+        double a = 2D * (tick + Math.sqrt(tick));
+        double theta = Math.sqrt(a);
+
+        double x = theta * Math.cos(theta);
+        double z = theta * Math.sin(theta);
+        return new Pos(x, z);
+    }
+
     @EventHandler
     public void init(FMLInitializationEvent event) {
         MinecraftForge.EVENT_BUS.register(this);
@@ -78,6 +95,7 @@ public class TechnoSaplingCounter {
         if (ENABLE_DANGEROUS_STUFF) {
             ClientCommandHandler.instance.registerCommand(new CommandLetsPlantTheseTrees());
             ClientCommandHandler.instance.registerCommand(new CommandTreePlantOffset());
+            ClientCommandHandler.instance.registerCommand(new CommandTps());
         }
     }
 
@@ -146,37 +164,42 @@ public class TechnoSaplingCounter {
 
 
         Pos playerPos = getPos(currentTick);
-//        switch (index) {
-//            case 1: {
-//                double offset = 4;
-//                BlockPos playerPos = posForCurrentTree.south((int) offset);
+//        System.out.println(Math.pow(thePlayer.posX - thePlayer.lastTickPosX, 2) + Math.pow(thePlayer.posZ - thePlayer.lastTickPosZ, 2));
+        double playerHeight = 50;
+        double horizOffset = 50;
+        double treeLevel = 4;
+        switch (index) {
+            case 2: {
+                BlockPos hitPos = new BlockPos(playerPos.x, treeLevel, playerPos.z);
+                Minecraft.getMinecraft().playerController.onPlayerRightClick(thePlayer, Minecraft.getMinecraft().theWorld, thePlayer.getHeldItem(), hitPos, EnumFacing.UP, new Vec3(0, 0, 0));
+                Minecraft.getMinecraft().thePlayer.swingItem();
+            }
+            case 1: {
 
-        System.out.println(Math.pow(thePlayer.posX - thePlayer.lastTickPosX, 2) + Math.pow(thePlayer.posZ - thePlayer.lastTickPosZ, 2));
-        float atan = (float) Math.atan(1D / offset);
-        for (WorldServer worldServer : Minecraft.getMinecraft().getIntegratedServer().worldServers) {
-            for (EntityPlayer playerEntity : worldServer.playerEntities) {
-                if (playerEntity.getUniqueID() == Minecraft.getMinecraft().thePlayer.getUniqueID()) {
-                    ((EntityPlayerMP) playerEntity).playerNetServerHandler.setPlayerLocation(playerPos.x, 4, playerPos.z, 180, 0); //Tan -1 .5
+                for (WorldServer worldServer : MinecraftServer.getServer().worldServers) {
+                    for (EntityPlayer playerEntity : worldServer.playerEntities) {
+                        if (playerEntity.getUniqueID() == Minecraft.getMinecraft().thePlayer.getUniqueID()) {
+                            double x = playerPos.x;
+                            double z = playerPos.z;
+                            double angle = Math.atan(z / x);
+                            x -= Math.cos(x > 0 ? angle + Math.PI : angle) * horizOffset;
+                            z -= Math.sin(x > 0 ? angle + Math.PI : angle) * horizOffset;
+                            angle = Math.toDegrees(angle);
+                            angle -= 90;
+                            if (x > 0) {
+                                angle += 180;
+                            }
+                            EntityPlayerMP playerEntity1 = (EntityPlayerMP) playerEntity;
+                            playerEntity1.theItemInWorldManager.setBlockReachDistance(1000000);
+                            playerEntity1.playerNetServerHandler.setPlayerLocation(x, playerHeight, z, (float) angle, (float) Math.toDegrees(Math.atan(((playerHeight - treeLevel) / horizOffset)))); //Tan -1 .5
+                            playerEntity1.playerNetServerHandler.hasMoved = true;
+                        }
+                    }
                 }
             }
-//                }
-//                break;
-//            }
-//            case 2: {
-//                Minecraft.getMinecraft().playerController.onPlayerRightClick(thePlayer, Minecraft.getMinecraft().theWorld, thePlayer.getHeldItem(), posForCurrentTree, EnumFacing.UP, new Vec3(0, 0, 0));
-//                break;
-//            }
+
         }
 
-    }
-
-    private Pos getPos(int tick) {
-
-        double v = 3D / 2D * Math.PI;
-        relT += .1D / (Math.PI * 2 * Math.toRadians(tick / v));
-        double x = relT * Math.cos(relT) / v;
-        double z = relT * Math.sin(relT) / v;
-        return new Pos(x, z);
     }
 
     private BlockPos getPosForCurrentTree(int y) {
@@ -243,6 +266,20 @@ public class TechnoSaplingCounter {
         public Pos(double x, double z) {
             this.x = x;
             this.z = z;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+            Pos pos = (Pos) o;
+            return Double.compare(pos.x, x) == 0 &&
+                    Double.compare(pos.z, z) == 0;
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(x, z);
         }
     }
 }
