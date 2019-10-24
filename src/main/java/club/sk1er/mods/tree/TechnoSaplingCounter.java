@@ -6,11 +6,8 @@ import net.minecraft.client.gui.FontRenderer;
 import net.minecraft.client.gui.Gui;
 import net.minecraft.client.gui.ScaledResolution;
 import net.minecraft.client.network.NetHandlerPlayClient;
-import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.item.Item;
 import net.minecraft.network.play.client.C16PacketClientStatus;
-import net.minecraft.server.MinecraftServer;
 import net.minecraft.stats.StatBase;
 import net.minecraft.stats.StatCrafting;
 import net.minecraft.stats.StatFileWriter;
@@ -19,7 +16,6 @@ import net.minecraft.util.EnumChatFormatting;
 import net.minecraft.util.EnumFacing;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.Vec3;
-import net.minecraft.world.WorldServer;
 import net.minecraftforge.client.ClientCommandHandler;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.fml.common.Mod;
@@ -77,7 +73,7 @@ public class TechnoSaplingCounter {
     }
 
 
-    private Pos getPos(int tick) {
+    private Pos getPos(double tick) {
 
         //new goal, take tick and find point tick * 3 units out on our r = theta spiral
 
@@ -151,26 +147,26 @@ public class TechnoSaplingCounter {
     }
 
     private void updatePos(Pos playerPos, double horizOffset, double playerHeight, double treeLevel) {
-        for (WorldServer worldServer : MinecraftServer.getServer().worldServers) {
-            for (EntityPlayer playerEntity : worldServer.playerEntities) {
-                if (playerEntity.getUniqueID() == Minecraft.getMinecraft().thePlayer.getUniqueID()) {
-                    double x = playerPos.x;
-                    double z = playerPos.z;
-                    double angle = Math.atan(z / x);
-                    x -= Math.cos(x > 0 ? angle + Math.PI : angle) * horizOffset;
-                    z -= Math.sin(x > 0 ? angle + Math.PI : angle) * horizOffset;
-                    angle = Math.toDegrees(angle);
-                    angle -= 90;
-                    if (x > 0) {
-                        angle += 180;
-                    }
-                    EntityPlayerMP playerEntity1 = (EntityPlayerMP) playerEntity;
-                    playerEntity1.theItemInWorldManager.setBlockReachDistance(1000000);
-                    playerEntity1.playerNetServerHandler.setPlayerLocation(x, playerHeight, z, (float) angle, (float) Math.toDegrees(Math.atan(((playerHeight - treeLevel) / horizOffset)))); //Tan -1 .5
-                    playerEntity1.playerNetServerHandler.hasMoved = true;
-                }
-            }
-        }
+//        for (WorldServer worldServer : MinecraftServer.getServer().worldServers) {
+//            for (EntityPlayer playerEntity : worldServer.playerEntities) {
+//                if (playerEntity.getUniqueID() == Minecraft.getMinecraft().thePlayer.getUniqueID()) {
+//                    double x = playerPos.x;
+//                    double z = playerPos.z;
+//                    double angle = Math.atan(z / x);
+//                    x -= Math.cos(x > 0 ? angle + Math.PI : angle) * horizOffset;
+//                    z -= Math.sin(x > 0 ? angle + Math.PI : angle) * horizOffset;
+//                    angle = Math.toDegrees(angle);
+//                    angle -= 90;
+//                    if (x > 0) {
+//                        angle += 180;
+//                    }
+//                    EntityPlayerMP playerEntity1 = (EntityPlayerMP) playerEntity;
+//                    playerEntity1.theItemInWorldManager.setBlockReachDistance(1000000);
+//                    playerEntity1.playerNetServerHandler.setPlayerLocation(x, playerHeight, z, (float) angle, (float) Math.toDegrees(Math.atan(((playerHeight - treeLevel) / horizOffset)))); //Tan -1 .5
+//                    playerEntity1.playerNetServerHandler.hasMoved = true;
+//                }
+//            }
+//        }
     }
 
     private void tickAI() {
@@ -187,7 +183,6 @@ public class TechnoSaplingCounter {
         double horizOffset = 50;
         double treeLevel = 4;
         updatePos(playerPos, horizOffset, playerHeight, treeLevel);
-        if (currentTick % 3 == 0) return;
         index++;
         if (index == 3) {
             index = 1;
@@ -212,6 +207,23 @@ public class TechnoSaplingCounter {
 
     @SubscribeEvent
     public void onRender(TickEvent.RenderTickEvent event) {
+        if(event.phase == TickEvent.Phase.START && Minecraft.getMinecraft().thePlayer !=null && running) {
+            Pos playerPos = getPos(currentTick + event.renderTickTime);
+            double playerHeight = 50;
+            double horizOffset = 50;
+            double treeLevel = 4;
+            double x = playerPos.x;
+            double z = playerPos.z;
+            double angle = Math.atan(z / x);
+            x -= Math.cos(x > 0 ? angle + Math.PI : angle) * horizOffset;
+            z -= Math.sin(x > 0 ? angle + Math.PI : angle) * horizOffset;
+            angle = Math.toDegrees(angle);
+            angle -= 90;
+            if (x > 0) {
+                angle += 180;
+            }
+         Minecraft.getMinecraft().thePlayer.setLocationAndAngles(x, playerHeight, z, (float) angle, (float) Math.toDegrees(Math.atan(((playerHeight - treeLevel) / horizOffset)))); //Tan -1 .5
+        }
         NumberFormat myFormat = NumberFormat.getInstance();
         myFormat.setGroupingUsed(true); // this will also round numbers, 3
 
