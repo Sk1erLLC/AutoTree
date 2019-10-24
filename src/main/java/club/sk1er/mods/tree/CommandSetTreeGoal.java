@@ -6,7 +6,7 @@ import net.minecraft.command.ICommandSender;
 import net.minecraft.util.ChatComponentText;
 import org.apache.commons.lang3.math.NumberUtils;
 
-public class CommandTreePlantOffset extends CommandBase {
+public class CommandSetTreeGoal extends CommandBase {
     @Override
     public boolean canCommandSenderUseCommand(ICommandSender sender) {
         return true;
@@ -14,21 +14,23 @@ public class CommandTreePlantOffset extends CommandBase {
 
     @Override
     public String getCommandName() {
-        return "treeplantoffset";
+        return "settreegoal";
     }
 
     @Override
     public String getCommandUsage(ICommandSender sender) {
-        return "/treeplantoffset";
+        return "/settreegoal <num>";
     }
 
     @Override
     public void processCommand(ICommandSender sender, String[] args) throws CommandException {
-        if (args.length != 1 || !NumberUtils.isNumber(args[0].replaceFirst("-", ""))) {
-            sender.addChatMessage(new ChatComponentText("/treeplantoffset <number>"));
+        if(args.length != 1 || !NumberUtils.isNumber(args[0].replaceFirst("-",""))) {
+            sender.addChatMessage(new ChatComponentText("/settreegoal <number>"));
+            sender.addChatMessage(new ChatComponentText("current goal is " +  TechnoSaplingCounter.TREE_GOAL));
+
         } else {
-            TechnoSaplingCounter.currentTree = Integer.parseInt(args[0]);
-            sender.addChatMessage(new ChatComponentText("Set treeplantoffset to " + TechnoSaplingCounter.currentTick));
+            TechnoSaplingCounter.TREE_GOAL = Integer.parseInt(args[0]);
+            sender.addChatMessage(new ChatComponentText("Set tree goal to " + TechnoSaplingCounter.TREE_GOAL));
         }
     }
 }
