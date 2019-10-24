@@ -1,6 +1,7 @@
 package club.sk1er.mods.tree;
 
 import ch.obermuhlner.math.big.BigDecimalMath;
+import javafx.geometry.Pos;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.entity.EntityPlayerSP;
 import net.minecraft.client.gui.FontRenderer;
@@ -15,11 +16,7 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.stats.StatBase;
 import net.minecraft.stats.StatCrafting;
 import net.minecraft.stats.StatFileWriter;
-import net.minecraft.util.BlockPos;
-import net.minecraft.util.EnumChatFormatting;
-import net.minecraft.util.EnumFacing;
-import net.minecraft.util.ResourceLocation;
-import net.minecraft.util.Vec3;
+import net.minecraft.util.*;
 import net.minecraft.world.WorldServer;
 import net.minecraftforge.client.ClientCommandHandler;
 import net.minecraftforge.common.MinecraftForge;
@@ -30,16 +27,13 @@ import net.minecraftforge.fml.common.event.FMLPostInitializationEvent;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 import net.minecraftforge.fml.common.gameevent.TickEvent;
 
-import java.awt.Color;
+import java.awt.*;
 import java.math.BigDecimal;
 import java.math.MathContext;
 import java.text.NumberFormat;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
-import java.util.Objects;
-import java.util.TimeZone;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 
 @Mod(modid = TechnoSaplingCounter.MODID, version = TechnoSaplingCounter.VERSION)
@@ -175,7 +169,7 @@ public class TechnoSaplingCounter {
                     }
                     EntityPlayerMP playerEntity1 = (EntityPlayerMP) playerEntity;
                     playerEntity1.theItemInWorldManager.setBlockReachDistance(1000000);
-                    playerEntity1.playerNetServerHandler.setPlayerLocation(x, playerHeight, z, (float) angle, (float) Math.toDegrees(Math.atan(((playerHeight - treeLevel) / horizOffset)))); //Tan -1 .5
+//                    playerEntity1.playerNetServerHandler.setPlayerLocation(x, playerHeight, z, (float) angle, (float) Math.toDegrees(Math.atan(((playerHeight - treeLevel) / horizOffset)))); //Tan -1 .5
                     playerEntity1.playerNetServerHandler.hasMoved = true;
                 }
             }
@@ -198,7 +192,6 @@ public class TechnoSaplingCounter {
         double horizOffset = 50;
         double treeLevel = 4;
         updatePos(playerPos, horizOffset, playerHeight, treeLevel);
-        index++;
         if (currentTree % 10000 == 0) {
             System.out.println("currentTree = " + currentTree);
         }
@@ -206,15 +199,11 @@ public class TechnoSaplingCounter {
             System.out.println("currentTick = " + currentTick);
 
         }
-        if (index == 3) {
-            index = 1;
-            currentTree++;
-        }
-
-        if (index == 2) {
+        if(++index % 2 == 0) {
             BlockPos hitPos = new BlockPos(playerPos.x, treeLevel, playerPos.z);
             Minecraft.getMinecraft().playerController.onPlayerRightClick(thePlayer, Minecraft.getMinecraft().theWorld, thePlayer.getHeldItem(), hitPos, EnumFacing.UP, new Vec3(0, 0, 0));
             Minecraft.getMinecraft().thePlayer.swingItem();
+            currentTree++;
         }
 
     }
