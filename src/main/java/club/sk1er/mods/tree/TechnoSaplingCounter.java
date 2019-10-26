@@ -1,7 +1,6 @@
 package club.sk1er.mods.tree;
 
 import ch.obermuhlner.math.big.BigDecimalMath;
-import javafx.geometry.Pos;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.entity.EntityPlayerSP;
 import net.minecraft.client.gui.FontRenderer;
@@ -36,28 +35,19 @@ import java.util.List;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 
+
+/**
+ * This was created for the #TeamTrees fundraiser. Code is not high quality and was written quickly.
+ */
 @Mod(modid = TechnoSaplingCounter.MODID, version = TechnoSaplingCounter.VERSION)
 public class TechnoSaplingCounter {
 
     public static final boolean ENABLE_DANGEROUS_STUFF = true;
 
 
-    public static final String MODID = "techno-sapling-counter";
+    public static final String MODID = "team-trees-mod";
     public static final String VERSION = "1.0";
-    /*
-    #Index
-    0 -> idle
-    1 -> move to loc & look at loc
-
-//    2 -> place tree
-    #not used yet
-//    3 -> bone meal 1
-//    4 -> bone meal 2
-//    5 -> bone meal 3
-
-     */
     public static int TREE_GOAL = 20_000_000;
-
     public static int offset = 0;
     public static boolean running = false;
     public static byte index = 0;
@@ -66,26 +56,18 @@ public class TechnoSaplingCounter {
     public int ticksPerAction = 1;
     private short tick = 0;
     private List<StatBase> saplings = new ArrayList<>();
-    private Pos last = null;
 
     private static String func_180204_a(Item p_180204_0_) {
         ResourceLocation resourcelocation = Item.itemRegistry.getNameForObject(p_180204_0_);
         return resourcelocation != null ? resourcelocation.toString().replace(':', '.') : null;
     }
 
-    private Pos getPos(BigDecimal tick) {
-
-        //new goal, take tick and find point tick * 3 units out on our r = theta spiral
-
-//2D * (tick + Math.sqrt(tick));
-        long l = System.currentTimeMillis();
+    private Pos getPos(BigDecimal tick) { //Use BigDecimal to maintain precision at high magnitudes
 
         MathContext mathContext = new MathContext(128);
         BigDecimal a = tick.multiply(new BigDecimal(3));
         BigDecimal theta = BigDecimalMath.sqrt(a, mathContext);
 
-//        BigDecimal x = theta * Math.cos(theta);
-////        BigDecimal z = theta * Math.sin(theta);
         BigDecimal x = theta.multiply(BigDecimalMath.cos(theta, mathContext));
         BigDecimal z = theta.multiply(BigDecimalMath.sin(theta, mathContext));
         return new Pos(x.doubleValue(), z.doubleValue());
@@ -116,8 +98,7 @@ public class TechnoSaplingCounter {
 
     @SubscribeEvent
     public void tickEvent(TickEvent.ClientTickEvent event) {
-
-        if (event.phase == TickEvent.Phase.START) {
+        if (event.phase == TickEvent.Phase.START) { //Do at start of tick so it processes that tick
             if (running) {
                 currentTick++;
                 if (currentTick % ticksPerAction == 0) {
@@ -153,30 +134,19 @@ public class TechnoSaplingCounter {
         return offset;
     }
 
-    private void updatePos(Pos playerPos, double horizOffset, double playerHeight, double treeLevel) {
+    private void updateState() {//Make server allow our illegal placements
         for (WorldServer worldServer : MinecraftServer.getServer().worldServers) {
             for (EntityPlayer playerEntity : worldServer.playerEntities) {
                 if (playerEntity.getUniqueID() == Minecraft.getMinecraft().thePlayer.getUniqueID()) {
-                    double x = playerPos.x;
-                    double z = playerPos.z;
-                    double angle = Math.atan(z / x);
-                    x -= Math.cos(x > 0 ? angle + Math.PI : angle) * horizOffset;
-                    z -= Math.sin(x > 0 ? angle + Math.PI : angle) * horizOffset;
-                    angle = Math.toDegrees(angle);
-                    angle -= 90;
-                    if (x > 0) {
-                        angle += 180;
-                    }
                     EntityPlayerMP playerEntity1 = (EntityPlayerMP) playerEntity;
                     playerEntity1.theItemInWorldManager.setBlockReachDistance(1000000);
-//                    playerEntity1.playerNetServerHandler.setPlayerLocation(x, playerHeight, z, (float) angle, (float) Math.toDegrees(Math.atan(((playerHeight - treeLevel) / horizOffset)))); //Tan -1 .5
                     playerEntity1.playerNetServerHandler.hasMoved = true;
                 }
             }
         }
     }
 
-    private void tickAI() {
+    private void tickAI() { //Plant tree where it should be
         if (!ENABLE_DANGEROUS_STUFF) return;
         if (!running) return;
         if (currentTree == TREE_GOAL) {
@@ -188,10 +158,8 @@ public class TechnoSaplingCounter {
         Pos playerPos = getPos(new BigDecimal(currentTick));
 
 
-        double playerHeight = 50;
-        double horizOffset = 50;
         double treeLevel = 4;
-        updatePos(playerPos, horizOffset, playerHeight, treeLevel);
+        updateState();
         if (currentTree % 10000 == 0) {
             System.out.println("currentTree = " + currentTree);
         }
@@ -199,7 +167,7 @@ public class TechnoSaplingCounter {
             System.out.println("currentTick = " + currentTick);
 
         }
-        if(++index % 2 == 0) {
+        if (++index % 2 == 0) {
             BlockPos hitPos = new BlockPos(playerPos.x, treeLevel, playerPos.z);
             Minecraft.getMinecraft().playerController.onPlayerRightClick(thePlayer, Minecraft.getMinecraft().theWorld, thePlayer.getHeldItem(), hitPos, EnumFacing.UP, new Vec3(0, 0, 0));
             Minecraft.getMinecraft().thePlayer.swingItem();
@@ -211,9 +179,10 @@ public class TechnoSaplingCounter {
     @SubscribeEvent
     public void onRender(TickEvent.RenderTickEvent event) {
         if (event.phase == TickEvent.Phase.START && Minecraft.getMinecraft().thePlayer != null && running) {
-            Pos playerPos = getPos(new BigDecimal(currentTick).add(new BigDecimal(event.renderTickTime)));
+            Pos playerPos = getPos(new BigDecimal(currentTick).add(new BigDecimal(event.renderTickTime))); //Big decimal for high magnitude and precision
 
 
+            //Math
             double playerHeight = 50;
             double horizOffset = 50;
             double treeLevel = 4;
@@ -227,10 +196,10 @@ public class TechnoSaplingCounter {
             if (x > 0) {
                 angle += 180;
             }
-            Minecraft.getMinecraft().thePlayer.setLocationAndAngles(x, playerHeight, z, (float) angle, (float) Math.toDegrees(Math.atan(((playerHeight - treeLevel) / horizOffset)))); //Tan -1 .5
+            Minecraft.getMinecraft().thePlayer.setLocationAndAngles(x, playerHeight, z, (float) angle, (float) Math.toDegrees(Math.atan(((playerHeight - treeLevel) / horizOffset))));
         }
         NumberFormat myFormat = NumberFormat.getInstance();
-        myFormat.setGroupingUsed(true); // this will also round numbers, 3
+        myFormat.setGroupingUsed(true);
 
         String text = EnumChatFormatting.AQUA + "Trees Planted: " + myFormat.format(getSaplingCount());
 

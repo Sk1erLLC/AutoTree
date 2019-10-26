@@ -1,14 +1,14 @@
 [
 {
-  "modid": "techno-sapling-counter",
-  "name": "Technoblade Sapling Counter",
-  "description": "Example placeholder mod.",
+  "modid": "team-trees-mod",
+  "name": "Team Trees Mod",
+  "description": "Plants trees you",
   "version": "${version}",
   "mcversion": "${mcversion}",
   "url": "",
   "updateUrl": "",
   "authorList": ["Sk1er"],
-  "credits": "Technoblade for asking Sk1er for it on Twitter",
+  "credits": "MrBeast and Mark Rober & all others for helping to organize this fundraiser",
   "logoFile": "",
   "screenshots": [],
   "dependencies": []
